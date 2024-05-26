@@ -43,7 +43,7 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
         self.headerContent = hcontent()
         self.mainContent = mcontent()
 
-        self.isPresented = selectedDetent.wrappedValue != .hidden
+        self.isPresented = selectedDetent.wrappedValue != .notPresented
     }
 
     func updateTranslation(_ yTranslation: CGFloat, yVelocity: Double, geometry: GeometryProxy) {
@@ -88,7 +88,7 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
 
     func body(content: Content) -> some View {
         GeometryReader { mainGeometry in
-            ZStack() {
+            ZStack {
                 content
                 if isPresented {
                     GeometryReader { geometry in
@@ -151,22 +151,22 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
                 limits = detents.limits(for: mainGeometry)
             })
             .onChange(of: selectedDetent, perform: { detent in
-                if !isPresented && detent != .hidden {
+                if !isPresented && detent != .notPresented {
                     isPresented = true
                 }
                 let translation = detent.size(in: mainGeometry)
                 if self.translation == translation {
-                    isPresented = detent != .hidden
+                    isPresented = detent != .notPresented
                 } else {
                     var transaction = Transaction(animation: animation)
                     if #available(iOS 17.0, *) {
                         transaction.addAnimationCompletion {
-                            isPresented = detent != .hidden
+                            isPresented = detent != .notPresented
                         }
                     } else {
                         // 0.5 showld be enough to finish the animation
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            isPresented = detent != .hidden
+                            isPresented = detent != .notPresented
                         }
                     }
                     withTransaction(transaction) {

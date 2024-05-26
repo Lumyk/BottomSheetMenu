@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Evegeny Kalashnikov on 22.05.2024.
 //
@@ -10,10 +10,13 @@ import SwiftUI
 public enum BottomSheetDetent: Hashable {
     typealias Limits = (min: CGFloat, max: CGFloat)
 
+    /// hidden — this is state when menu height == 0 but it still presented
     case hidden
+    /// notPresented — this is state when all SwiftUI code not presented
+    case notPresented
     case medium
     case large
-    /// fullScreen — this is mode when drag Indicator hides behind the screen area
+    /// fullScreen — this is state when drag Indicator hides behind the screen area
     case fullScreen
     case fraction(CGFloat)
     case height(CGFloat)
@@ -22,7 +25,7 @@ public enum BottomSheetDetent: Hashable {
         let height = geometry.size.height + geometry.safeAreaInsets.bottom
         let bottom: CGFloat = 0
         switch self {
-        case .hidden:
+        case .hidden, .notPresented:
             return 0
         case .medium:
             return height / 2 + bottom
@@ -51,7 +54,7 @@ extension Set where Element == BottomSheetDetent {
     func calculateDetent(translation: CGFloat, yVelocity: CGFloat, geometry: GeometryProxy) -> BottomSheetDetent {
 
         let sortedDetents = self.sorted { $0.size(in: geometry) < $1.size(in: geometry) }
-        guard let minDetent = sortedDetents.first else { return .hidden }
+        guard let minDetent = sortedDetents.first else { return .notPresented }
         guard let maxDetent = sortedDetents.last else { return minDetent }
 
         if translation < minDetent.size(in: geometry) {
