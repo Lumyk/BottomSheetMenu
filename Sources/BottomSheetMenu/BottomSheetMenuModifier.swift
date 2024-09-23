@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Evegeny Kalashnikov on 22.05.2024.
 //
@@ -15,8 +15,9 @@ extension View {
         background: Background = Color(UIColor.systemBackground).cornerRadius(10),
         onDismiss: @escaping () -> Void = {},
         onDrag: @escaping (_ translation: CGFloat, _ detent: BottomSheetDetent) -> Void = { _, _ in },
+        shadowAction: (() -> Void)? = nil,
         header: () -> HContent = { EmptyView() },
-        main: () -> MContent
+        main: @escaping (BottomSheetMenuScroller) -> MContent
     ) -> some View {
         modifier(
             BottomSheetMenu(
@@ -24,7 +25,8 @@ extension View {
                 selectedDetent: selectedDetent,
                 background: background,
                 onDismiss: onDismiss,
-                onDrag: onDrag,
+                onDrag: onDrag, 
+                shadowAction: shadowAction,
                 hcontent: header,
                 mcontent: main
             )

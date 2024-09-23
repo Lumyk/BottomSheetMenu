@@ -21,13 +21,17 @@ struct ContentView: View {
                 }
                 .padding(.top, 100)
             }
-            .bottomSheetMenu(detents: .height(100), .medium, .large, selectedDetent: $selectedDetent) {
+            .bottomSheetMenu(detents: .medium, selectedDetent: $selectedDetent) { scroller in
                 ForEach(0..<10) { index in
                     Text("Hello, World!")
                         .padding()
                         .background(index % 2 == 0 ? Color.green : Color.cyan)
                         .cornerRadius(10)
                         .padding()
+                        .mark(item: index, scroller: scroller)
+                }
+                .onAppear {
+                    scroller.scrollTo(item: 5)
                 }
             }
     }

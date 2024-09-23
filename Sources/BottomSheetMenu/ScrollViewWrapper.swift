@@ -48,7 +48,7 @@ struct ScrollViewWrapper<Content: View>: UIViewRepresentable {
     let onDragChange: (_ yTranslation: CGFloat) -> Void
     let onDargFinished: () -> Void
     let limits: (min: CGFloat, max: CGFloat)
-    let content: () -> Content
+    let content: (UIScrollViewOverride) -> Content
 
     func makeUIView(context: Context) -> UIScrollViewOverride {
         let scrollView = UIScrollViewOverride(translation: $translation, limits: limits)
@@ -60,7 +60,7 @@ struct ScrollViewWrapper<Content: View>: UIViewRepresentable {
 
         scrollView.addSubview(hostingController.view)
 
-        scrollView.contentInsetAdjustmentBehavior = .never
+        scrollView.contentInsetAdjustmentBehavior = .always
         scrollView.alwaysBounceVertical = true
         scrollView.delegate = context.coordinator
 
@@ -91,16 +91,16 @@ struct ScrollViewWrapper<Content: View>: UIViewRepresentable {
     func updateUIView(_ scrollView: UIScrollViewOverride, context: Context) {
         scrollView.limits = limits
 
-        context.coordinator.hostingController.rootView = self.content()
+        context.coordinator.hostingController.rootView = self.content(scrollView)
         if #unavailable(iOS 16.0) { // Before iOS 16
             context.coordinator.hostingController.view.setNeedsUpdateConstraints()
         }
     }
 
     func makeCoordinator() -> Coordinator {
-        return Coordinator(
+        Coordinator(
             representable: self,
-            hostingController: UIHostingController(rootView: content()),
+            hostingController: UIHostingController(rootView: content(UIScrollViewOverride(translation: $translation, limits: limits))),
             onDragChange: onDragChange,
             onDargFinished: onDargFinished
         )
