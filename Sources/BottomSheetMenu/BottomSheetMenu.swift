@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Evegeny Kalashnikov on 22.05.2024.
 //
@@ -11,13 +11,16 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
 
     let detents: Set<BottomSheetDetent>
     @Binding var selectedDetent: BottomSheetDetent
-    let mainContent: MContent
-    let headerContent: HContent
-    let onDismiss: () -> Void
-    let onDrag: (_ translation: CGFloat, _ detent: BottomSheetDetent) -> Void
     let background: Background
 
-    @State private var isPresented: Bool = true
+    let onDismiss: () -> Void
+    let onDrag: (_ translation: CGFloat, _ detent: BottomSheetDetent) -> Void
+    let shadowAction: (() -> Void)?
+
+    let mainContent: (BottomSheetMenuScroller) -> MContent
+    let headerContent: HContent
+
+    @State private var isPresented: Bool
     @State private var translation: CGFloat = 0
     @State private var oldTranslation: CGFloat?
     @State private var startTime: DragGesture.Value?
@@ -25,23 +28,28 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
     private let animation: Animation = .default
     private let dragIndicatorColor: Color = .init(red: 194/255.0, green: 199/255.0, blue: 208/255.0)
 
+    @State private var scroller: BottomSheetMenuScroller = BottomSheetMenuScroller()
+
     init(detents: Set<BottomSheetDetent>,
          selectedDetent: Binding<BottomSheetDetent>,
          background: Background,
          onDismiss: @escaping () -> Void,
          onDrag: @escaping (_ translation: CGFloat, _ detent: BottomSheetDetent) -> Void,
+         shadowAction: (() -> Void)?,
          @ViewBuilder hcontent: () -> HContent,
-         @ViewBuilder mcontent: () -> MContent) {
+         @ViewBuilder mcontent: @escaping (BottomSheetMenuScroller) -> MContent) {
 
         self.detents = detents
         _selectedDetent = selectedDetent
 
         self.background = background
+
         self.onDismiss = onDismiss
         self.onDrag = onDrag
+        self.shadowAction = shadowAction
 
         self.headerContent = hcontent()
-        self.mainContent = mcontent()
+        self.mainContent = mcontent
 
         self.isPresented = selectedDetent.wrappedValue != .notPresented
     }
@@ -90,6 +98,13 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
         GeometryReader { mainGeometry in
             ZStack {
                 content
+                    .overlay {
+                        if let shadowAction {
+                            Color.black.opacity(isPresented ? 0.5 / mainGeometry.size.height * translation  : 0)
+                                .edgesIgnoringSafeArea([.top, .bottom])
+                                .onTapGesture { shadowAction() }
+                        }
+                    }
                 if isPresented {
                     GeometryReader { geometry in
                         VStack(spacing: 0) {
@@ -127,9 +142,14 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
                                 onDragChange: { updateTranslation($0, yVelocity: 0, geometry: geometry) },
                                 onDargFinished: { magnetize(yVelocity: 0, geometry: geometry) },
                                 limits: limits
-                            ) {
-                                mainContent
-                                    .frame(width: geometry.size.width)
+                            ) { scrollView in
+                                scroller.content {
+                                    VStack(spacing: 0) {
+                                        mainContent(scroller)
+                                            .frame(width: geometry.size.width)
+                                    }
+                                }
+                                .onAppear { scroller.scrollView = scrollView }
                             }
                         }
                         .background(background)
@@ -141,6 +161,7 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
                     }
                     .edgesIgnoringSafeArea([.bottom])
                     .transition(.move(edge: .bottom))
+                    .onDisappear { scroller.scrollView = nil } // TODO: fix memory leak
                 }
             }
             .onAppear {
@@ -156,7 +177,10 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
                 }
                 let translation = detent.size(in: mainGeometry)
                 if self.translation == translation {
-                    isPresented = detent != .notPresented
+                    // 0.5 showld be enough to finish the animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        isPresented = detent != .notPresented
+                    }
                 } else {
                     var transaction = Transaction(animation: animation)
                     if #available(iOS 17.0, *) {
@@ -177,4 +201,3 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
         }
     }
 }
-

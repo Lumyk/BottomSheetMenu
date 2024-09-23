@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		154FCA0A2CA1751D001B488B /* BottomSheetMenuScroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 154FCA092CA1751D001B488B /* BottomSheetMenuScroller.swift */; };
 		15636D492BFE3C530014365E /* ExampleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15636D482BFE3C530014365E /* ExampleApp.swift */; };
 		15636D4B2BFE3C530014365E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15636D4A2BFE3C530014365E /* ContentView.swift */; };
 		15636D4D2BFE3C540014365E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 15636D4C2BFE3C540014365E /* Assets.xcassets */; };
@@ -19,6 +20,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		154FCA092CA1751D001B488B /* BottomSheetMenuScroller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetMenuScroller.swift; sourceTree = "<group>"; };
 		15636D452BFE3C530014365E /* Example.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Example.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		15636D482BFE3C530014365E /* ExampleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleApp.swift; sourceTree = "<group>"; };
 		15636D4A2BFE3C530014365E /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -82,6 +84,7 @@
 			isa = PBXGroup;
 			children = (
 				15636D5C2BFE3FF80014365E /* BottomSheetMenuModifier.swift */,
+				154FCA092CA1751D001B488B /* BottomSheetMenuScroller.swift */,
 				15636D5D2BFE3FF80014365E /* BottomSheetMenu.swift */,
 				15636D5E2BFE3FF80014365E /* DragIndicator.swift */,
 				15636D5F2BFE3FF80014365E /* BottomSheetDetent.swift */,
@@ -166,6 +169,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				15636D642BFE3FF80014365E /* BottomSheetDetent.swift in Sources */,
+				154FCA0A2CA1751D001B488B /* BottomSheetMenuScroller.swift in Sources */,
 				15636D4B2BFE3C530014365E /* ContentView.swift in Sources */,
 				15636D612BFE3FF80014365E /* BottomSheetMenuModifier.swift in Sources */,
 				15636D492BFE3C530014365E /* ExampleApp.swift in Sources */,
