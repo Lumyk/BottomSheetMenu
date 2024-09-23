@@ -25,10 +25,9 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
     @State private var oldTranslation: CGFloat?
     @State private var startTime: DragGesture.Value?
     @State private var limits: BottomSheetDetent.Limits = (min: 0, max: 0)
+    @State private var scroller: BottomSheetMenuScroller = BottomSheetMenuScroller()
     private let animation: Animation = .default
     private let dragIndicatorColor: Color = .init(red: 194/255.0, green: 199/255.0, blue: 208/255.0)
-
-    @State private var scroller: BottomSheetMenuScroller = BottomSheetMenuScroller()
 
     init(detents: Set<BottomSheetDetent>,
          selectedDetent: Binding<BottomSheetDetent>,
@@ -143,13 +142,12 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
                                 onDargFinished: { magnetize(yVelocity: 0, geometry: geometry) },
                                 limits: limits
                             ) { scrollView in
-                                scroller.content {
+                                scroller.content(scrollView: scrollView) {
                                     VStack(spacing: 0) {
                                         mainContent(scroller)
                                             .frame(width: geometry.size.width)
                                     }
                                 }
-                                .onAppear { scroller.scrollView = scrollView }
                             }
                         }
                         .background(background)
@@ -161,7 +159,6 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
                     }
                     .edgesIgnoringSafeArea([.bottom])
                     .transition(.move(edge: .bottom))
-                    .onDisappear { scroller.scrollView = nil } // TODO: fix memory leak
                 }
             }
             .onAppear {

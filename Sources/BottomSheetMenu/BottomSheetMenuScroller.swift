@@ -28,8 +28,12 @@ public class BottomSheetMenuScroller {
         }
     }
 
-    func content<V: View>(@ViewBuilder view: () -> V) -> some View {
-        view().coordinateSpace(name: coordinateSpaceName)
+    func content<V: View>(scrollView: UIScrollViewOverride, @ViewBuilder view: () -> V) -> some View {
+        view()
+            .coordinateSpace(name: coordinateSpaceName)
+            .onAppear { [weak self, weak scrollView] in
+                self?.scrollView = scrollView
+            }
     }
 
     public func scrollTo<T: Hashable>(item: T, animated: Bool = false) {
