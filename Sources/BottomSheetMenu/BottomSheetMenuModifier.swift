@@ -9,26 +9,24 @@ import SwiftUI
 
 extension View {
 
-    public func bottomSheetMenu<HContent: View, MContent: View, Background: View>(
-        detents: BottomSheetDetent...,
-        selectedDetent: Binding<BottomSheetDetent>,
-        background: Background = Color(UIColor.systemBackground).cornerRadius(10),
+    public func bottomSheetMenu<HContent: View, MContent: View, FContent: View>(
+        configuration: BottomSheetMenuConfiguration = .init(),
+        state: Binding<BottomSheetMenuDetentState>,
         onDismiss: @escaping () -> Void = {},
-        onDrag: @escaping (_ translation: CGFloat, _ detent: BottomSheetDetent) -> Void = { _, _ in },
         shadowAction: (() -> Void)? = nil,
-        header: () -> HContent = { EmptyView() },
-        main: @escaping (BottomSheetMenuScroller) -> MContent
+        @ViewBuilder header: () -> HContent = { EmptyView() },
+        @ViewBuilder footer: @escaping () -> FContent = { EmptyView() },
+        @ViewBuilder main: @escaping (BottomSheetMenuScroller) -> MContent
     ) -> some View {
         modifier(
             BottomSheetMenu(
-                detents: Set(detents),
-                selectedDetent: selectedDetent,
-                background: background,
+                configuration: configuration,
+                state: state,
                 onDismiss: onDismiss,
-                onDrag: onDrag, 
                 shadowAction: shadowAction,
                 hcontent: header,
-                mcontent: main
+                mcontent: main,
+                fcontent: footer
             )
         )
     }
