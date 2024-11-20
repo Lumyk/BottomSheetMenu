@@ -7,18 +7,19 @@
 
 import SwiftUI
 
-struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewModifier {
+struct BottomSheetMenu<HContent: View, MContent: View, FContent: View>: ViewModifier {
 
-    let detents: Set<BottomSheetDetent>
-    @Binding var selectedDetent: BottomSheetDetent
-    let background: Background
+    @Environment(\.orientation) var orientation
 
     let onDismiss: () -> Void
-    let onDrag: (_ translation: CGFloat, _ detent: BottomSheetDetent) -> Void
     let shadowAction: (() -> Void)?
 
-    let mainContent: (BottomSheetMenuScroller) -> MContent
     let headerContent: HContent
+    let mainContent: (BottomSheetMenuScroller) -> MContent
+    @ViewBuilder let footerContent: () -> FContent
+
+    @State private var configuration: BottomSheetMenuConfiguration
+    @Binding private var state: BottomSheetMenuDetentState
 
     @State private var isPresented: Bool
     @State private var translation: CGFloat = 0
@@ -26,34 +27,33 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
     @State private var startTime: DragGesture.Value?
     @State private var limits: BottomSheetDetent.Limits = (min: 0, max: 0)
     @State private var scroller: BottomSheetMenuScroller = BottomSheetMenuScroller()
+    @State private var footerContentHeight: CGFloat = 0
+
     private let animation: Animation = .default
     private let dragIndicatorColor: Color = .init(red: 194/255.0, green: 199/255.0, blue: 208/255.0)
 
-    init(detents: Set<BottomSheetDetent>,
-         selectedDetent: Binding<BottomSheetDetent>,
-         background: Background,
+    init(configuration: BottomSheetMenuConfiguration,
+         state: Binding<BottomSheetMenuDetentState>,
          onDismiss: @escaping () -> Void,
-         onDrag: @escaping (_ translation: CGFloat, _ detent: BottomSheetDetent) -> Void,
          shadowAction: (() -> Void)?,
          @ViewBuilder hcontent: () -> HContent,
-         @ViewBuilder mcontent: @escaping (BottomSheetMenuScroller) -> MContent) {
+         @ViewBuilder mcontent: @escaping (BottomSheetMenuScroller) -> MContent,
+         @ViewBuilder fcontent: @escaping () -> FContent) {
 
-        self.detents = detents
-        _selectedDetent = selectedDetent
-
-        self.background = background
+        self.configuration = configuration
+        _state = state
 
         self.onDismiss = onDismiss
-        self.onDrag = onDrag
         self.shadowAction = shadowAction
 
-        self.headerContent = hcontent()
-        self.mainContent = mcontent
+        headerContent = hcontent()
+        mainContent = mcontent
+        footerContent = fcontent
 
-        self.isPresented = selectedDetent.wrappedValue != .notPresented
+        isPresented = state.selectedDetent.wrappedValue != .notPresented
     }
 
-    func updateTranslation(_ yTranslation: CGFloat, yVelocity: Double, geometry: GeometryProxy) {
+    private func updateTranslation(_ yTranslation: CGFloat, yVelocity: Double, geometry: GeometryProxy) {
         if oldTranslation == nil { oldTranslation = translation }
         let oldTranslation = oldTranslation ?? translation
 
@@ -70,27 +70,70 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
             }
         }
 
-        let detent = detents.calculateDetent(translation: translation, yVelocity: yVelocity, geometry: geometry)
-        onDrag(translation, detent)
+        let detent = state.detents.calculateDetent(
+            translation: translation,
+            yVelocity: yVelocity,
+            geometry: geometry,
+            bottomContentHeight: footerContentHeight
+        )
+
+        state.currentDetent = detent
+        state.currentTranslation = translation
     }
 
-    func magnetize(yVelocity: Double, geometry: GeometryProxy) {
-        let detent = detents.calculateDetent(translation: translation, yVelocity: yVelocity, geometry: geometry)
-        let translation = detent.size(in: geometry)
+    private func magnetize(yVelocity: Double, geometry: GeometryProxy) {
+        let detent = state.detents.calculateDetent(
+            translation: translation,
+            yVelocity: yVelocity,
+            geometry: geometry,
+            bottomContentHeight: footerContentHeight
+        )
+        let translation = detent.size(in: geometry, bottomContentHeight: footerContentHeight)
         withAnimation(self.translation == translation ? .none : animation) {
             self.translation = translation
         }
-        onDrag(translation, detent)
-        selectedDetent = detent
+
+        state.currentDetent = detent
+        state.currentTranslation = translation
+        state.selectedDetent = detent
+
         oldTranslation = nil
     }
 
     /// Calculate velocity based on pt/s so it matches the UIPanGesture
-    func velocity(for value: DragGesture.Value) -> CGFloat {
+    private func velocity(for value: DragGesture.Value) -> CGFloat {
         guard let startTime else { return 0 }
         let distance = value.translation.height
         let time = value.time.timeIntervalSince(startTime.time)
         return -1 * ((distance / time) / 1000)
+    }
+
+    private func onChange(detent: BottomSheetDetent, geometry: GeometryProxy) {
+        if !isPresented && detent != .notPresented {
+            isPresented = true
+        }
+        let translation = detent.size(in: geometry, bottomContentHeight: footerContentHeight)
+        if self.translation == translation {
+            // 0.5 showld be enough to finish the animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isPresented = detent != .notPresented
+            }
+        } else {
+            var transaction = Transaction(animation: animation)
+            if #available(iOS 17.0, *) {
+                transaction.addAnimationCompletion {
+                    isPresented = detent != .notPresented
+                }
+            } else {
+                // 0.5 showld be enough to finish the animation
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isPresented = detent != .notPresented
+                }
+            }
+            withTransaction(transaction) {
+                self.translation = translation
+            }
+        }
     }
 
     func body(content: Content) -> some View {
@@ -124,7 +167,7 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
                                         updateTranslation(
                                             value.translation.height,
                                             yVelocity: yVelocity,
-                                            geometry: geometry
+                                            geometry: mainGeometry
                                         )
                                         if startTime == nil { startTime = value }
                                     }
@@ -132,25 +175,35 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
                                         oldTranslation = nil
                                         let yVelocity = velocity(for: value)
                                         startTime = nil
-                                        magnetize(yVelocity: yVelocity, geometry: geometry)
+                                        magnetize(yVelocity: yVelocity, geometry: mainGeometry)
                                     }
                             )
+                            .onTapGesture {
+                                if state.selectedDetent != state.defaultDetent {
+                                    // Need to call onChange to update translation before changing detent
+                                    onChange(detent: state.defaultDetent, geometry: mainGeometry)
+                                    state.currentDetent = state.defaultDetent
+                                    state.selectedDetent = state.defaultDetent
+                                }
+                            }
 
                             ScrollViewWrapper(
                                 translation: $translation,
-                                onDragChange: { updateTranslation($0, yVelocity: 0, geometry: geometry) },
-                                onDargFinished: { magnetize(yVelocity: 0, geometry: geometry) },
+                                onDragChange: { updateTranslation($0, yVelocity: 0, geometry: mainGeometry) },
+                                onDargFinished: { magnetize(yVelocity: 0, geometry: mainGeometry) },
                                 limits: limits
                             ) { scrollView in
                                 scroller.content(scrollView: scrollView) {
                                     VStack(spacing: 0) {
                                         mainContent(scroller)
                                             .frame(width: geometry.size.width)
+                                        Color.clear
+                                            .frame(height: footerContentHeight)
                                     }
                                 }
                             }
                         }
-                        .background(background)
+                        .background(configuration.background)
                         .frame(height: limits.max)
                         .onDisappear {
                             onDismiss()
@@ -160,40 +213,41 @@ struct BottomSheetMenu<HContent: View, MContent: View, Background: View>: ViewMo
                     .edgesIgnoringSafeArea([.bottom])
                     .transition(.move(edge: .bottom))
                 }
+
+                VStack {
+                    Spacer()
+
+                    VStack {
+                        footerContent()
+                            .background(
+                                GeometryReader { geometry in
+                                    Color.clear
+                                        .onAppear {
+                                            footerContentHeight = geometry.size.height
+                                        }
+                                }
+                            )
+                            .background(Color.clear)
+                    }
+                    .background(configuration.footerBackgroundColor)
+                    .edgesIgnoringSafeArea(.bottom)
+                }
             }
             .onAppear {
-                limits = detents.limits(for: mainGeometry)
-                translation = selectedDetent.size(in: mainGeometry)
+                limits = state.detents.limits(for: mainGeometry, bottomContentHeight: footerContentHeight)
+                translation = state.selectedDetent.size(in: mainGeometry, bottomContentHeight: footerContentHeight)
             }
-            .onChange(of: mainGeometry.size, perform: { _ in
-                limits = detents.limits(for: mainGeometry)
+            .onChange(of: translation, perform: {
+                state.currentTranslation = $0
             })
-            .onChange(of: selectedDetent, perform: { detent in
-                if !isPresented && detent != .notPresented {
-                    isPresented = true
-                }
-                let translation = detent.size(in: mainGeometry)
-                if self.translation == translation {
-                    // 0.5 showld be enough to finish the animation
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        isPresented = detent != .notPresented
-                    }
-                } else {
-                    var transaction = Transaction(animation: animation)
-                    if #available(iOS 17.0, *) {
-                        transaction.addAnimationCompletion {
-                            isPresented = detent != .notPresented
-                        }
-                    } else {
-                        // 0.5 showld be enough to finish the animation
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            isPresented = detent != .notPresented
-                        }
-                    }
-                    withTransaction(transaction) {
-                        self.translation = translation
-                    }
-                }
+            .onChange(of: mainGeometry.size, perform: { _ in
+                limits = state.detents.limits(for: mainGeometry, bottomContentHeight: footerContentHeight)
+            })
+            .onChange(of: state.selectedDetent, perform: {
+                onChange(detent: $0, geometry: mainGeometry)
+            })
+            .onChange(of: orientation.type, perform: { _ in
+                onChange(detent: state.selectedDetent, geometry: mainGeometry)
             })
         }
     }
