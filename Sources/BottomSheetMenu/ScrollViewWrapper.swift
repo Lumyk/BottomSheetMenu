@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Evegeny Kalashnikov on 22.05.2024.
 //
@@ -9,12 +9,10 @@ import SwiftUI
 import UIKit
 
 class UIScrollViewOverride: UIScrollView {
-    @Binding var translation: CGFloat
-    var limits: (min: CGFloat, max: CGFloat)
+    var dynamicSizeParams: () -> (yTranslation: CGFloat, maxLimit: CGFloat)
 
-    init(translation: Binding<CGFloat>, limits: (min: CGFloat, max: CGFloat)) {
-        _translation = translation
-        self.limits = limits
+    init(dynamicSizeParams: @escaping () -> (yTranslation: CGFloat, maxLimit: CGFloat)) {
+        self.dynamicSizeParams = dynamicSizeParams
         super.init(frame: .zero)
     }
 
@@ -33,8 +31,9 @@ class UIScrollViewOverride: UIScrollView {
             return false
         }
 
+        let params = dynamicSizeParams()
         // Disable scroll view pan recognizer when nemu not fully opened and scrolling up
-        if translation != limits.max && velocity.y < 0 {
+        if params.yTranslation != params.maxLimit && velocity.y < 0 {
             return false
         }
 
@@ -44,14 +43,13 @@ class UIScrollViewOverride: UIScrollView {
 
 struct ScrollViewWrapper<Content: View>: UIViewRepresentable {
 
-    @Binding var translation: CGFloat
     let onDragChange: (_ yTranslation: CGFloat) -> Void
     let onDargFinished: () -> Void
-    let limits: (min: CGFloat, max: CGFloat)
+    let dynamicParams: () -> (yTranslation: CGFloat, maxLimit: CGFloat)
     let content: (UIScrollViewOverride) -> Content
 
     func makeUIView(context: Context) -> UIScrollViewOverride {
-        let scrollView = UIScrollViewOverride(translation: $translation, limits: limits)
+        let scrollView = UIScrollViewOverride(dynamicSizeParams: dynamicParams)
         let hostingController = context.coordinator.hostingController
 
         if #available(iOS 16.0, *) { // iOS 16 and later
@@ -89,8 +87,7 @@ struct ScrollViewWrapper<Content: View>: UIViewRepresentable {
     }
 
     func updateUIView(_ scrollView: UIScrollViewOverride, context: Context) {
-        scrollView.limits = limits
-
+        scrollView.dynamicSizeParams = dynamicParams
         context.coordinator.hostingController.rootView = self.content(scrollView)
         if #unavailable(iOS 16.0) { // Before iOS 16
             context.coordinator.hostingController.view.setNeedsUpdateConstraints()
@@ -100,7 +97,7 @@ struct ScrollViewWrapper<Content: View>: UIViewRepresentable {
     func makeCoordinator() -> Coordinator {
         Coordinator(
             representable: self,
-            hostingController: UIHostingController(rootView: content(UIScrollViewOverride(translation: $translation, limits: limits))),
+            hostingController: UIHostingController(rootView: content(UIScrollViewOverride(dynamicSizeParams: dynamicParams))),
             onDragChange: onDragChange,
             onDargFinished: onDargFinished
         )
@@ -149,9 +146,9 @@ struct ScrollViewWrapper<Content: View>: UIViewRepresentable {
         private let onDargFinished: () -> Void
 
         init(representable: ScrollViewWrapper,
-            hostingController: UIHostingController<Content>,
-            onDragChange: @escaping (_ yTranslation: CGFloat) -> Void,
-            onDargFinished: @escaping () -> Void) {
+             hostingController: UIHostingController<Content>,
+             onDragChange: @escaping (_ yTranslation: CGFloat) -> Void,
+             onDargFinished: @escaping () -> Void) {
 
             self.hostingController = hostingController
             self.representable = representable
