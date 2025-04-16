@@ -155,7 +155,7 @@ struct BottomSheetMenu<HContent: View, HID: Equatable, MContent: View, MID: Equa
     @State private var headerContentHeight: CGFloat = 0
     @State private var footerContentHeight: CGFloat = 0
 
-    private let defaultDetent: BottomSheetDetent
+    private let defaultDetent: BottomSheetDetent?
     private let animation: Animation = .default
     private let transaction = Transaction(animation: .default)
 
@@ -163,6 +163,7 @@ struct BottomSheetMenu<HContent: View, HID: Equatable, MContent: View, MID: Equa
          detents: Set<BottomSheetDetent>,
          currentDetent: Binding<BottomSheetDetent>,
          selectedDetent: Binding<BottomSheetDetent>,
+         defaultDetent: BottomSheetDetent?,
          translation: Binding<CGFloat>,
          onDismiss: @escaping () -> Void,
          shadowAction: (() -> Void)?,
@@ -177,7 +178,7 @@ struct BottomSheetMenu<HContent: View, HID: Equatable, MContent: View, MID: Equa
         _selectedDetent = selectedDetent
         _currentTranslation = translation
 
-        self.defaultDetent = selectedDetent.wrappedValue
+        self.defaultDetent = defaultDetent
 
         self.onDismiss = onDismiss
         self.shadowAction = shadowAction
@@ -330,7 +331,7 @@ struct BottomSheetMenu<HContent: View, HID: Equatable, MContent: View, MID: Equa
                                 startTime = nil
                                 magnetize(yVelocity: yVelocity, geometry: mainGeometry)
                             } onTap: {
-                                if selectedDetent != defaultDetent {
+                                if let defaultDetent, selectedDetent != defaultDetent {
                                     // Need to call onChange to update translation before changing detent
                                     onChange(detent: defaultDetent, geometry: mainGeometry)
                                     currentDetent = defaultDetent
@@ -367,7 +368,7 @@ struct BottomSheetMenu<HContent: View, HID: Equatable, MContent: View, MID: Equa
             }
             .onAppear {
                 limits = detents.limits(for: mainGeometry, bottomContentHeight: footerContentHeight + headerContentHeight)
-                onChange(detent: defaultDetent, geometry: mainGeometry, animated: false)
+                onChange(detent: selectedDetent, geometry: mainGeometry, animated: false)
             }
             .onChange(of: mainGeometry.size) { _ in
                 limits = detents.limits(for: mainGeometry, bottomContentHeight: footerContentHeight + headerContentHeight)
