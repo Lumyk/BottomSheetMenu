@@ -74,9 +74,10 @@ extension Set where Element == BottomSheetDetent {
             let lowerSize = lower.size(in: geometry, bottomContentHeight: bottomContentHeight)
             let upperSize = upper.size(in: geometry, bottomContentHeight: bottomContentHeight)
             let middle = lowerSize + (upperSize - lowerSize) / 2
+            let yVelocity =  -1 * (yVelocity / 1000)
 
             if lowerSize...upperSize ~= translation {
-                if abs(yVelocity) > 1.8 {
+                if abs(yVelocity) > 1.2 { // 1.2 - empiric value
                     return yVelocity > 0 ? upper : lower
                 } else {
                     return translation > middle ? upper : lower
