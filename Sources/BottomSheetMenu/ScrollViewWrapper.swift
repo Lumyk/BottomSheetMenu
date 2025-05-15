@@ -43,8 +43,8 @@ class UIScrollViewOverride: UIScrollView {
 
 struct ScrollViewWrapper<Content: View>: UIViewRepresentable {
 
-    let onDragChange: (_ yTranslation: CGFloat) -> Void
-    let onDargFinished: () -> Void
+    let onDragChange: (_ yTranslation: CGFloat, _ yVelocity: CGFloat) -> Void
+    let onDargFinished: (_ yVelocity: CGFloat) -> Void
     let dynamicParams: () -> (yTranslation: CGFloat, maxLimit: CGFloat)
     let content: (UIScrollViewOverride) -> Content
 
@@ -129,12 +129,15 @@ struct ScrollViewWrapper<Content: View>: UIViewRepresentable {
         @objc func handlePan(_ panGestureRecognizer: UIPanGestureRecognizer) {
             guard let scrollView = panGestureRecognizer.view else { return }
 
+            let yVelocity = panGestureRecognizer.velocity(in: scrollView).y
+
             switch panGestureRecognizer.state {
             case .began, .changed:
                 let yTranslation = panGestureRecognizer.translation(in: scrollView).y
-                onDragChange(yTranslation)
+
+                onDragChange(yTranslation, yVelocity)
             case .ended, .cancelled:
-                onDargFinished()
+                onDargFinished(yVelocity)
             default:
                 break
             }
@@ -142,13 +145,13 @@ struct ScrollViewWrapper<Content: View>: UIViewRepresentable {
 
         private let representable: ScrollViewWrapper
         var hostingController: UIHostingController<Content>
-        private let onDragChange: (_ yTranslation: CGFloat) -> Void
-        private let onDargFinished: () -> Void
+        private let onDragChange: (_ yTranslation: CGFloat, _ yVelocity: CGFloat) -> Void
+        private let onDargFinished: (_ yVelocity: CGFloat) -> Void
 
         init(representable: ScrollViewWrapper,
              hostingController: UIHostingController<Content>,
-             onDragChange: @escaping (_ yTranslation: CGFloat) -> Void,
-             onDargFinished: @escaping () -> Void) {
+             onDragChange: @escaping (_ yTranslation: CGFloat, _ yVelocity: CGFloat) -> Void,
+             onDargFinished: @escaping (_ yVelocity: CGFloat) -> Void) {
 
             self.hostingController = hostingController
             self.representable = representable

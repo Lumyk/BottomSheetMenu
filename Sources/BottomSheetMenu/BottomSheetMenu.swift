@@ -15,8 +15,8 @@ struct MainContentView<Content: View, ID: Equatable>: View, Equatable {
         lhs.footerContentHeight == rhs.footerContentHeight
     }
 
-    let onDragChange: (_ yTranslation: CGFloat) -> Void
-    let onDargFinished: () -> Void
+    let onDragChange: (_ yTranslation: CGFloat, _ yVelocity: CGFloat) -> Void
+    let onDargFinished: (_ yVelocity: CGFloat) -> Void
     let dynamicParams: () -> (yTranslation: CGFloat, maxLimit: CGFloat)
     let width: CGFloat
     let footerContentHeight: CGFloat
@@ -156,8 +156,8 @@ struct BottomSheetMenu<HContent: View, HID: Equatable, MContent: View, MID: Equa
     @State private var footerContentHeight: CGFloat = 0
 
     private let defaultDetent: BottomSheetDetent?
-    private let animation: Animation = .default
-    private let transaction = Transaction(animation: .default)
+    private let animation: Animation = .easeInOut(duration: 0.23)
+    private let transaction = Transaction(animation: .easeInOut(duration: 0.23))
 
     init(configuration: BottomSheetMenuConfiguration,
          detents: Set<BottomSheetDetent>,
@@ -228,24 +228,12 @@ struct BottomSheetMenu<HContent: View, HID: Equatable, MContent: View, MID: Equa
         )
         let translation = detent.size(in: geometry, bottomContentHeight: footerContentHeight + headerContentHeight)
 
-        if #available(iOS 17.0, *) {
-            withAnimation(animation) {
-                currentTranslation = translation
-                self.translation = translation
-            } completion: {
-                currentDetent = detent
-                selectedDetent = detent
-            }
-        } else {
-            withAnimation(animation) {
-                currentTranslation = translation
-                self.translation = translation
-            }
+        withAnimation(animation) {
+            currentTranslation = translation
+            self.translation = translation
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                currentDetent = detent
-                selectedDetent = detent
-            }
+            currentDetent = detent
+            selectedDetent = detent
         }
 
         oldTranslation = nil
@@ -256,7 +244,7 @@ struct BottomSheetMenu<HContent: View, HID: Equatable, MContent: View, MID: Equa
         guard let startTime else { return 0 }
         let distance = value.translation.height
         let time = value.time.timeIntervalSince(startTime.time)
-        return -1 * ((distance / time) / 1000)
+        return (distance / time)
     }
 
     private func onChange(detent: BottomSheetDetent, geometry: GeometryProxy, animated: Bool = true) {
@@ -341,8 +329,8 @@ struct BottomSheetMenu<HContent: View, HID: Equatable, MContent: View, MID: Equa
 
                             // Main content
                             EquatableView(content: MainContentView(
-                                onDragChange: { updateTranslation($0, yVelocity: 0, geometry: mainGeometry) },
-                                onDargFinished: { magnetize(yVelocity: 0, geometry: mainGeometry) },
+                                onDragChange: { updateTranslation($0, yVelocity: $1, geometry: mainGeometry) },
+                                onDargFinished: { magnetize(yVelocity: $0, geometry: mainGeometry) },
                                 dynamicParams: { (translation, limits.max) },
                                 width: geometry.size.width,
                                 footerContentHeight: footerContentHeight,
