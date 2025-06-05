@@ -91,7 +91,7 @@ struct ScrollViewWrapper<Content: View>: UIViewRepresentable {
         context.coordinator.hostingController.rootView = self.content(scrollView)
         if #unavailable(iOS 16.0) { // Before iOS 16
             context.coordinator.hostingController.view.setNeedsUpdateConstraints()
-            // Fix for correct size calculation in ios 15 and les
+            // Fix for correct size calculation in iOS 15 and less
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 context.coordinator.hostingController.view.setNeedsUpdateConstraints()
             }
